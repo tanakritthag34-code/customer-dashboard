@@ -4,27 +4,30 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 
-# ======================
-# CONFIG
-# ======================
+# =============================
+# PAGE CONFIG
+# =============================
 st.set_page_config(layout="wide")
 sns.set_style("whitegrid")
 sns.set_palette("Set2")
 
-st.title("📊 Executive Customer Purchase Dashboard")
+st.title("📊 Executive Customer Purchase Behavior Dashboard")
 
+# =============================
+# LOAD DATA
+# =============================
 FILE_NAME = "customer_data.csv"
 
 if not os.path.exists(FILE_NAME):
-    st.error("❌ ไม่พบไฟล์ customer_data.csv")
+    st.error("❌ customer_data.csv not found")
     st.stop()
 
 df = pd.read_csv(FILE_NAME)
 df.columns = df.columns.str.strip().str.lower()
 
-# ======================
-# SIDEBAR FILTER
-# ======================
+# =============================
+# SIDEBAR FILTERS
+# =============================
 st.sidebar.header("🔎 Filter Options")
 
 region_filter = st.sidebar.multiselect(
@@ -57,9 +60,14 @@ if filtered_df.empty:
     st.warning("No data available for selected filters")
     st.stop()
 
-# ======================
+# Create Age Group
+bins = [20,30,40,50,60]
+labels = ["20-29","30-39","40-49","50+"]
+filtered_df["age_group"] = pd.cut(filtered_df["age"], bins=bins, labels=labels, right=False)
+
+# =============================
 # KPI SECTION
-# ======================
+# =============================
 st.markdown("## 🔹 Key Business Metrics")
 
 col1, col2, col3, col4 = st.columns(4)
@@ -71,9 +79,11 @@ col4.metric("Avg Frequency", round(filtered_df["purchase_frequency"].mean(),2))
 
 st.markdown("---")
 
-# ======================
-# ROW 1
-# ======================
+# =============================
+# VISUALIZATION SECTION
+# =============================
+
+# Row 1
 col1, col2 = st.columns(2)
 
 with col1:
@@ -88,9 +98,7 @@ with col2:
     filtered_df.groupby("region")["purchase_amount"].mean().sort_values().plot(kind="bar")
     st.pyplot(fig)
 
-# ======================
-# ROW 2
-# ======================
+# Row 2
 col1, col2 = st.columns(2)
 
 with col1:
@@ -100,20 +108,18 @@ with col1:
     st.pyplot(fig)
 
 with col2:
-    st.subheader("Income vs Purchase (Colored by Loyalty)")
+    st.subheader("Income vs Purchase (Loyalty Colored)")
     fig, ax = plt.subplots()
     sns.scatterplot(
         data=filtered_df,
-        x="annual_income",
+        x="annual_inc",
         y="purchase_amount",
         hue="loyalty_score",
         palette="viridis"
     )
     st.pyplot(fig)
 
-# ======================
-# ROW 3
-# ======================
+# Row 3
 col1, col2 = st.columns(2)
 
 with col1:
@@ -124,16 +130,13 @@ with col1:
 
 with col2:
     st.subheader("Average Purchase by Age Group")
-    bins = [20,30,40,50,60]
-    labels = ["20-29","30-39","40-49","50+"]
-    filtered_df["age_group"] = pd.cut(filtered_df["age"], bins=bins, labels=labels, right=False)
     fig, ax = plt.subplots()
     filtered_df.groupby("age_group")["purchase_amount"].mean().plot(kind="bar")
     st.pyplot(fig)
 
-# ======================
+# =============================
 # TOP 10% HIGH VALUE CUSTOMERS
-# ======================
+# =============================
 st.markdown("---")
 st.markdown("## 🏆 Top 10% High Value Customers")
 
@@ -144,53 +147,77 @@ others = filtered_df[filtered_df["purchase_amount"] < threshold]
 col1, col2, col3 = st.columns(3)
 col1.metric("Top 10% Customers", len(top_10))
 col2.metric("Avg Purchase (Top 10%)", f"${top_10['purchase_amount'].mean():,.2f}")
-col3.metric("Revenue Contribution %", 
+col3.metric("Revenue Contribution %",
             f"{(top_10['purchase_amount'].sum()/filtered_df['purchase_amount'].sum())*100:.1f}%")
 
 fig, ax = plt.subplots()
 sns.histplot(top_10["purchase_amount"], color="gold")
 st.pyplot(fig)
 
-# ======================
-# CORRELATION
-# ======================
+# =============================
+# CORRELATION HEATMAP
+# =============================
 st.markdown("---")
 st.subheader("Correlation Heatmap")
 
 fig, ax = plt.subplots()
 sns.heatmap(
-    filtered_df[["age","annual_income","purchase_amount","loyalty_score","purchase_frequency"]].corr(),
+    filtered_df[["age","annual_inc","purchase_amount","loyalty_score","purchase_frequency"]].corr(),
     annot=True,
     cmap="coolwarm"
 )
 st.pyplot(fig)
 
-# ======================
-# AUTO INSIGHT SECTION
-# ======================
+# =============================
+# BUSINESS QUESTION ANALYSIS
+# =============================
 st.markdown("---")
-st.markdown("## 🤖 Automated Business Insights")
+st.markdown("## 📊 Business Question Analysis")
 
-highest_region = (
-    filtered_df.groupby("region")["purchase_amount"]
-    .mean()
-    .idxmax()
-)
+# Q1
+st.markdown("### 1️⃣ ลูกค้ากลุ่มใดมีแนวโน้มซื้อสินค้าสูง?")
 
-highest_value = (
-    filtered_df.groupby("region")["purchase_amount"]
-    .mean()
-    .max()
-)
+top_region = filtered_df.groupby("region")["purchase_amount"].mean().idxmax()
+top_age = filtered_df.groupby("age_group")["purchase_amount"].mean().idxmax()
 
-st.success(f"""
-• Region ที่มี Average Purchase สูงสุดคือ **{highest_region}** 
-  (เฉลี่ย ${highest_value:,.2f})
-
-• ลูกค้า Top 10% สร้างรายได้คิดเป็น 
-  {(top_10['purchase_amount'].sum()/filtered_df['purchase_amount'].sum())*100:.1f}% 
-  ของรายได้ทั้งหมด
-
-• Loyalty Score มีความสัมพันธ์กับ Purchase Amount ที่ระดับ 
-  {filtered_df['loyalty_score'].corr(filtered_df['purchase_amount']):.2f}
+st.write(f"""
+• Region ที่มีค่าเฉลี่ยการซื้อสูงสุดคือ **{top_region}**  
+• Age Group ที่ใช้จ่ายสูงสุดคือ **{top_age}**  
+• ลูกค้าที่มี Loyalty Score สูงมีแนวโน้มซื้อสูงกว่า
 """)
+
+# Q2
+st.markdown("### 2️⃣ ปัจจัยใดทำให้ลูกค้ากลับมาซื้อซ้ำ?")
+
+loyalty_corr = filtered_df["loyalty_score"].corr(filtered_df["purchase_frequency"])
+income_corr = filtered_df["annual_inc"].corr(filtered_df["purchase_frequency"])
+age_corr = filtered_df["age"].corr(filtered_df["purchase_frequency"])
+
+st.write(f"""
+• Loyalty vs Frequency correlation = **{loyalty_corr:.2f}**  
+• Income vs Frequency correlation = **{income_corr:.2f}**  
+• Age vs Frequency correlation = **{age_corr:.2f}**
+
+👉 Loyalty Score เป็นปัจจัยหลักที่ส่งผลต่อการซื้อซ้ำ
+""")
+
+# Q3
+st.markdown("### 3️⃣ สามารถจำแนกลูกค้าตามพฤติกรรมได้หรือไม่?")
+
+high_value = filtered_df[
+    (filtered_df["purchase_amount"] > filtered_df["purchase_amount"].quantile(0.75)) &
+    (filtered_df["loyalty_score"] > filtered_df["loyalty_score"].quantile(0.75))
+]
+
+low_engagement = filtered_df[
+    (filtered_df["purchase_amount"] < filtered_df["purchase_amount"].quantile(0.25)) &
+    (filtered_df["loyalty_score"] < filtered_df["loyalty_score"].quantile(0.25))
+]
+
+st.write(f"""
+🏆 High Value Loyal Customers: **{len(high_value)} คน**  
+⚠ Low Engagement Customers: **{len(low_engagement)} คน**
+
+ลูกค้าสามารถแบ่งกลุ่มตามพฤติกรรมการซื้อและระดับ Loyalty ได้อย่างชัดเจน
+""")
+
