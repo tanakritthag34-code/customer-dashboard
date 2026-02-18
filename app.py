@@ -112,7 +112,7 @@ with col2:
     fig, ax = plt.subplots()
     sns.scatterplot(
         data=filtered_df,
-        x="annual_inc",
+        x="annual_income",
         y="purchase_amount",
         hue="loyalty_score",
         palette="viridis"
@@ -162,7 +162,7 @@ st.subheader("Correlation Heatmap")
 
 fig, ax = plt.subplots()
 sns.heatmap(
-    filtered_df[["age","annual_inc","purchase_amount","loyalty_score","purchase_frequency"]].corr(),
+    filtered_df[["age","annual_income","purchase_amount","loyalty_score","purchase_frequency"]].corr(),
     annot=True,
     cmap="coolwarm"
 )
@@ -190,7 +190,7 @@ st.write(f"""
 st.markdown("### 2️⃣ ปัจจัยใดทำให้ลูกค้ากลับมาซื้อซ้ำ?")
 
 loyalty_corr = filtered_df["loyalty_score"].corr(filtered_df["purchase_frequency"])
-income_corr = filtered_df["annual_inc"].corr(filtered_df["purchase_frequency"])
+income_corr = filtered_df["annual_income"].corr(filtered_df["purchase_frequency"])
 age_corr = filtered_df["age"].corr(filtered_df["purchase_frequency"])
 
 st.write(f"""
